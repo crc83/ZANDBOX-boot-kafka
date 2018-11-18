@@ -6,9 +6,7 @@ import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
-import org.antlr.v4.runtime.ANTLRFileStream;
 import org.antlr.v4.runtime.BailErrorStrategy;
-import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.DiagnosticErrorListener;
@@ -16,8 +14,12 @@ import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.atn.LexerATNSimulator;
 import org.antlr.v4.runtime.atn.PredictionMode;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 import org.sbelei.pharsers.MarkupParser.Java9Lexer;
 import org.sbelei.pharsers.MarkupParser.Java9Parser;
+
+import ch.qos.logback.core.db.dialect.MySQLDialect;
 
 public class PharserMain {
 
@@ -68,7 +70,7 @@ public class PharserMain {
 	}
 
 	public static void main(String[] args) {
-		args = new String[] {"C:\\projects\\ZANDBOX-boot-kafka\\src\\main\\java", "-ptree", "-gui", "-2x"};
+		args = new String[] {"C:\\projects\\ZANDBOX-boot-kafka\\src\\main\\java",/* "-ptree",*/ "-gui", "-2x"};
 		doAll(args);
 	}
 
@@ -122,7 +124,7 @@ public class PharserMain {
 			e.printStackTrace(System.err);   // so we can get stack trace
 		}
 		long stop = System.currentTimeMillis();
-//		System.out.println("Overall time " + (stop - start) + "ms.");
+		System.out.println("Overall time " + (stop - start) + "ms.");
 		System.gc();
 	}
 
@@ -223,7 +225,7 @@ public class PharserMain {
 		try {
 			if ( !quiet ) System.err.println(f);
 			// Create a scanner that reads from the input stream passed to us
-			Lexer lexer = new Java9Lexer(new ANTLRFileStream(f));
+			Lexer lexer = new Java9Lexer(CharStreams.fromFileName(f));
 
 			CommonTokenStream tokens = new CommonTokenStream(lexer);
 //			long start = System.currentTimeMillis();
@@ -238,14 +240,24 @@ public class PharserMain {
 			if ( SLL ) parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
 
 			// start parsing at the compilationUnit rule
-			ParserRuleContext t = parser.compilationUnit();
+			ParserRuleContext ast = parser.compilationUnit();
 			if ( notree ) parser.setBuildParseTree(false);
 //			if ( gui ) t.inspect(parser);
-			if ( printTree ) System.out.println(t.toStringTree(parser));
+			if ( printTree ) System.out.println(ast.toStringTree(parser));
+			
+			analyzeIfPublisher(ast);
 		}
 		catch (Exception e) {
 			System.err.println("parser exception: "+e);
 			e.printStackTrace();   // so we can get stack trace
+		}
+	}
+
+	private static void analyzeIfPublisher(ParserRuleContext ast) {
+		// TODO Auto-generated method stub
+		ParseTreeVisitor skyWakler = new MyParseTreeVisitor();
+		for( ParseTree item :ast.children ) {
+			item.accept(skyWakler);			
 		}
 	}
 }
